@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="pid-controller-testing:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/pid_controller_testing_jar</output-path>
+    <root id="archive" name="pid-controller-testing.jar">
+      <element id="module-output" name="pid-controller-testing" />
+      <element id="extracted-dir" path="$USER_HOME$/Downloads/jSerialComm-2.11.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/swingx-all-1.6.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/Downloads/flatlaf-3.7.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
