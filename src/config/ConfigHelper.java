@@ -76,14 +76,14 @@ public class ConfigHelper {
 
         Document document = domImpl.createDocument(null, "properties", doctype);
         document.setXmlStandalone(true);
-        var root = document.getDocumentElement();
+        Element root = document.getDocumentElement();
         Date now = new Date();
-        var comment = document.createElement("comment");
+        Element comment = document.createElement("comment");
         comment.setTextContent(now.toString());
         root.appendChild(comment);
 
         for (Config.Entry entry : config.entries().values()) {
-            var entryElem = document.createElement("entry");
+            Element entryElem = document.createElement("entry");
             entryElem.setAttribute("key", entry.key());
             entryElem.setTextContent(String.valueOf(entry.value()));
             root.appendChild(entryElem);
@@ -119,7 +119,6 @@ public class ConfigHelper {
 
             return writer.toString();
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException("Error converting Document to String", e);
         }
     }

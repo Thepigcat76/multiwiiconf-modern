@@ -42,7 +42,7 @@ public class SettingsTab implements Tab {
     }
 
     private void onBaudRateSelected(ListSelectionEvent event) {
-        this.settings.setSerialPort(this.baudRates.getSelectedValue());
+        this.settings.setBaudRate(this.baudRates.getSelectedValue());
     }
 
     private void onResetButtonPressed(ActionEvent event) {

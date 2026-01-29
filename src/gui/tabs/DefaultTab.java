@@ -1,6 +1,8 @@
 package gui.tabs;
 
+import com.fazecast.jSerialComm.SerialPort;
 import gui.Window;
+import org.jdesktop.swingx.JXGraph;
 import org.jdesktop.swingx.JXMultiSplitPane;
 import org.jdesktop.swingx.MultiSplitLayout;
 import settings.Settings;
@@ -11,6 +13,8 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,6 +35,7 @@ public class DefaultTab implements Tab {
     private PIDTable pidTable;
     private Object[][] pidTableData;
     private JTable pidTableComp;
+    private String selectedComPort;
 
     public DefaultTab(Settings settings) {
         this.settings = settings;
@@ -52,31 +57,57 @@ public class DefaultTab implements Tab {
         JPanel leftPanel = this.createLeftPanel();
         Component center0Panel = this.createCenter0Panel();
         JPanel center1Panel = this.createCenter1Panel();
+        JPanel center0BottomPanel = this.createCenter0BottomPanel();
 
         MultiSplitLayout.Node topLayout = MultiSplitLayout.parseModel(
                 "(ROW (LEAF name=left weight=0.2) (LEAF name=center0 weight=0.4) (LEAF name=center1 weight=0.2) (LEAF name=right weight=0.2))"
         );
 
-        JXMultiSplitPane topMsp = new JXMultiSplitPane();
-        topMsp.getMultiSplitLayout().setModel(topLayout);
+        JXMultiSplitPane mainMsp = new JXMultiSplitPane();
+        mainMsp.getMultiSplitLayout().setModel(topLayout);
 
-        topMsp.add(leftPanel, "left");
-        topMsp.add(center0Panel, "center0");
-        topMsp.add(center1Panel, "center1");
-        topMsp.add(new JButton("Right Panel"), "right");
-
-        MultiSplitLayout.Node bottomLayout = MultiSplitLayout.parseModel(
+        MultiSplitLayout.Node center0Layout = MultiSplitLayout.parseModel(
                 "(COLUMN (LEAF name=top weight=0.5) (LEAF name=bottom weight=0.5))"
         );
 
-        JXMultiSplitPane bottomMsp = new JXMultiSplitPane();
-        bottomMsp.getMultiSplitLayout().setModel(bottomLayout);
+        JXMultiSplitPane center0Msp = new JXMultiSplitPane();
+        center0Msp.getMultiSplitLayout().setModel(center0Layout);
 
-        bottomMsp.add(topMsp, "top");
-        bottomMsp.add(new JButton("BOTTOM"), "bottom");
+        center0Msp.add(center0Panel, "top");
+        center0Msp.add(center0BottomPanel, "bottom");
 
-        this.body.add(bottomMsp, BorderLayout.CENTER);
+        mainMsp.add(leftPanel, "left");
+        mainMsp.add(center0Msp, "center0");
+        mainMsp.add(center1Panel, "center1");
+        mainMsp.add(new JButton("Right Panel"), "right");
 
+        this.body.add(mainMsp, BorderLayout.CENTER);
+
+    }
+
+    private JPanel createCenter0BottomPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JPanel controlButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        controlButtonsPanel.add(new JButton("Start"));
+        controlButtonsPanel.add(new JButton("Stop"));
+
+        panel.add(controlButtonsPanel, BorderLayout.NORTH);
+        JXGraph graph = new JXGraph();
+        graph.setGridPainted(false);
+        graph.setAxisPainted(false);
+        graph.setTextPainted(false);
+        graph.grabFocus();
+
+        graph.addPlots(Color.CYAN, new JXGraph.Plot() {
+            @Override
+            public double compute(double x) {
+                return x;
+            }
+        });
+
+        panel.add(graph, BorderLayout.CENTER);
+        return panel;
     }
 
     private JPanel createCenter1Panel() {
@@ -110,8 +141,9 @@ public class DefaultTab implements Tab {
         // Create JTable with data and column names
         this.pidTableComp = new JTable(this.pidTableData, columnNames);
         this.pidTableComp.setRowHeight(40); // Set uniform row height
-        this.pidTableComp.setEnabled(false); // Make the table non-editable
+        this.pidTableComp.setEnabled(true); // Make the table non-editable
         this.pidTableComp.setFocusable(false);
+        //this.pidTableComp.addMouseMotionListener();
 
         // Add row names using a row header JTable
         // (Assumes 3 rows in the data array)
@@ -168,9 +200,55 @@ public class DefaultTab implements Tab {
 
         addLabel(leftPanel, "Serial Comm Port", true);
         JPanel serialPort = withBoxLayout(JPanel::new, Axis.VERTICAL);
-        addLabel(serialPort, "Selected Port: (null)", false);
-        serialPort.add(new JScrollPane(new JList<>(this.commPorts)));
+        JLabel selectedPortLabel = addLabel(serialPort, "Selected Port: (null)", false);
+        JList<String> list = new JList<>(this.commPorts);
+        serialPort.add(new JScrollPane(list));
+        list.addListSelectionListener(_ -> {
+            this.selectedComPort = list.getSelectedValue();
+            selectedPortLabel.setText("Selected Port: " + this.selectedComPort);
+        });
         leftPanel.add(serialPort);
+
+        JButton debugSerialButton = new JButton("Debug Serial");
+
+        debugSerialButton.addActionListener(_ -> new Thread(() -> {
+            if (this.selectedComPort != null) {
+                SerialPort comPort = SerialPort.getCommPort(this.selectedComPort);
+                comPort.openPort();
+                try {
+                    while (true) {
+                        byte[] readBuffer = new byte[1024];
+                        int numRead = comPort.readBytes(readBuffer, readBuffer.length);
+                        if (numRead == -1) break;
+
+                        byte[] finalString = Arrays.copyOf(readBuffer, numRead);
+                        for (byte b : finalString) {
+                            System.out.print((char) b);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                comPort.closePort();
+            }
+        }).start());
+        leftPanel.add(debugSerialButton);
+
+        addLabel(leftPanel, "Acc", true);
+        addSlider(leftPanel, "Roll", -5000, 5000, true);
+        addSlider(leftPanel, "Pitch", -5000, 5000, true);
+        addSlider(leftPanel, "Z", -5000, 5000, true);
+        addLabel(leftPanel, "Gyro", true);
+        addSlider(leftPanel, "Roll", -5000, 5000, true);
+        addSlider(leftPanel, "Pitch", -5000, 5000, true);
+        addSlider(leftPanel, "Yaw", -5000, 5000, true);
+        addLabel(leftPanel, "Mag", true);
+        addSlider(leftPanel, "Roll", -5000, 5000, true);
+        addSlider(leftPanel, "Pitch", -5000, 5000, true);
+        addSlider(leftPanel, "Yaw", -5000, 5000, true);
+        addSlider(leftPanel, "Alt", -5000, 5000, true, true);
+        addSlider(leftPanel, "Head", -5000, 5000, true, true);
+
         return leftPanel;
     }
 
@@ -189,9 +267,54 @@ public class DefaultTab implements Tab {
 
     private static void addSlider(Container container, String text) {
         JPanel panel = withBoxLayout(JPanel::new, Axis.HORIZONTAL);
-        JSlider slider = new JSlider();
+        JSlider slider = new JSlider(1000, 2000);
         panel.add(slider);
         panel.add(new JLabel(text));
+        JLabel label = new JLabel(String.valueOf(slider.getValue()));
+        slider.addChangeListener(_ -> {
+            label.setText(String.valueOf(slider.getValue()));
+        });
+        container.add(label);
+        container.add(panel);
+    }
+
+    private static void addSlider(Container container, String text, int min, int max, boolean labelLeft) {
+        JPanel panel = withBoxLayout(JPanel::new, Axis.HORIZONTAL);
+        JSlider slider = new JSlider(min, max);
+        if (labelLeft) {
+            panel.add(new JLabel(text));
+        }
+        panel.add(slider);
+        if (!labelLeft) {
+            panel.add(new JLabel(text));
+        }
+        JLabel label = new JLabel(String.valueOf(slider.getValue()));
+        slider.addChangeListener(_ -> {
+            label.setText(String.valueOf(slider.getValue()));
+        });
+        container.add(label);
+        container.add(panel);
+    }
+
+    private static void addSlider(Container container, String text, int min, int max, boolean labelLeft, boolean headline) {
+        Font font = new Font("Monospace", Font.PLAIN, 16);
+        JPanel panel = withBoxLayout(JPanel::new, Axis.HORIZONTAL);
+        JSlider slider = new JSlider(min, max);
+        if (labelLeft) {
+            JLabel label = new JLabel(text);
+            if (headline) {
+                label.setFont(font);
+            }
+            panel.add(label);
+        }
+        panel.add(slider);
+        if (!labelLeft) {
+            JLabel label = new JLabel(text);
+            if (headline) {
+                label.setFont(font);
+            }
+            panel.add(label);
+        }
         JLabel label = new JLabel(String.valueOf(slider.getValue()));
         slider.addChangeListener(_ -> {
             label.setText(String.valueOf(slider.getValue()));

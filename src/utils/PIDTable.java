@@ -97,7 +97,7 @@ public final class PIDTable {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (PIDTable) obj;
+        PIDTable that = (PIDTable) obj;
         return Objects.equals(this.options, that.options) &&
                 Float.floatToIntBits(this.throttleMid) == Float.floatToIntBits(that.throttleMid) &&
                 Float.floatToIntBits(this.throttleExpo) == Float.floatToIntBits(that.throttleExpo) &&
@@ -154,7 +154,7 @@ public final class PIDTable {
         public boolean equals(Object obj) {
             if (obj == this) return true;
             if (obj == null || obj.getClass() != this.getClass()) return false;
-            var that = (PIDOption) obj;
+            PIDOption that = (PIDOption) obj;
             return Objects.equals(this.key, that.key) &&
                     Float.floatToIntBits(this.p) == Float.floatToIntBits(that.p) &&
                     Float.floatToIntBits(this.i) == Float.floatToIntBits(that.i) &&

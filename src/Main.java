@@ -14,7 +14,7 @@ public class Main {
     public static final ConfigHelper CONFIG_HELPER = new ConfigHelper();
 
     void main() throws UnsupportedLookAndFeelException {
-        UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatLightLaf());
+        UIManager.setLookAndFeel(new com.formdev.flatlaf.FlatDarkLaf());
 
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame();
